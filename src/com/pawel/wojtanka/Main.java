@@ -6,9 +6,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.TimeZone;
 
 public class Main {
@@ -18,49 +18,75 @@ public class Main {
     private static final String DB_PASSWORD = "pawel";
     private static final String LOCAL_TIME_ZONE = TimeZone.getDefault().getID();
     private static final String QUERY = "SELECT title, releaseDate FROM moviesinfo";
-    private static final String PARAMETRIZED_QUERY = "SELECT title, releaseDate FROM moviesinfo WHERE releaseDate BETWEEN ? AND ?";
+    private static final String PARAMETRIZED_QUERY = "SELECT title, releaseDate " +
+        "FROM moviesinfo " +
+        "WHERE releaseDate BETWEEN ? AND ?";
+
+    private static Connection DB_CONNECTION;
 
     public static void main(String[] args) {
         Properties connectionProperties = new Properties();
         connectionProperties.put("user", DB_USER);
         connectionProperties.put("password", DB_PASSWORD);
         connectionProperties.put("serverTimezone", LOCAL_TIME_ZONE);
-        try (Connection connection = DriverManager.getConnection(DB_URL, connectionProperties);
-             Statement stmt = connection.createStatement()) {
+        try {
+            DB_CONNECTION = DriverManager.getConnection(DB_URL, connectionProperties);
 
-            ResultSet rs = stmt.executeQuery(QUERY);
+//            Statement stmt = DB_CONNECTION.createStatement();
+//
+//            ResultSet rs = stmt.executeQuery(QUERY);
+//
+//            System.out.println("Movies in our rental offer: ");
+//            System.out.println("Title:\t|\tReleaseDate:");
+//
+//            while (rs.next()) {
+//                System.out.println(rs.getString("title") + "\t|\t" +
+//                    rs.getDate(2));
+//            }
 
-            System.out.println("Movies in our rental offer: ");
-            System.out.println("Title:\t|\tReleaseDate:");
+            DateInterval dateInterval = prepareDateInterval();
+            printMoviesReleasedBetween(dateInterval.getStartDate(), dateInterval.getEndDate());
 
-            while (rs.next()) {
-                System.out.println(rs.getString("title") + "\t|\t" +
-                    rs.getDate(2));
-            }
-
-            printMoviesReleasedBetween(LocalDate.parse("2017-02-18"), LocalDate.parse("2020-02-18"), connection);
+//            stmt.close();
+            DB_CONNECTION.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private static void printMoviesReleasedBetween(final LocalDate from, final LocalDate to, final Connection connection) {
-        try (PreparedStatement stmst = connection.prepareStatement(PARAMETRIZED_QUERY)) {
+    private static void printMoviesReleasedBetween(final LocalDate from, final LocalDate to) {
+        try (PreparedStatement stmst = DB_CONNECTION.prepareStatement(PARAMETRIZED_QUERY)) {
             stmst.setDate(1, Date.valueOf(from));
             stmst.setDate(2, Date.valueOf(to));
 
             ResultSet rs = stmst.executeQuery();
 
-            while (rs.next()) {
-                System.out.println(String.format("Movies in our rental offer (released between %s and %s)", from, to));
-                System.out.println(rs.getString(1) + " >>> " + rs.getDate(2));
-            }
+            printMovies(from, to, rs);
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
 
+    private static void printMovies(LocalDate from, LocalDate to, ResultSet rs) throws SQLException {
+        while (rs.next()) {
+            System.out.println(String.format("Movies in our rental offer (released between %s and %s)", from, to));
+            System.out.println(rs.getString(1) + " >>> " + rs.getDate(2));
+        }
+    }
 
+    private static DateInterval prepareDateInterval() {
+        System.out.println("Give start date:");
+        LocalDate from = giveDate();
+        System.out.println("Give end date:");
+        LocalDate to = giveDate();
+
+        return new DateInterval(from, to);
+    }
+
+    private static LocalDate giveDate() {
+        Scanner scanner = new Scanner(System.in);
+        return LocalDate.parse(scanner.next());
     }
 
 }
