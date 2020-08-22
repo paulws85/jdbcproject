@@ -2,20 +2,20 @@ package com.pawel.wojtanka;
 
 import java.time.LocalDate;
 
-public class DateInterval {
+class DateInterval {
     private final LocalDate startDate;
     private final LocalDate endDate;
 
-    public DateInterval(LocalDate startDate, LocalDate endDate) {
+    DateInterval(LocalDate startDate, LocalDate endDate) {
         this.startDate = startDate;
         this.endDate = endDate;
     }
 
-    public LocalDate getStartDate() {
+    LocalDate getStartDate() {
         return startDate;
     }
 
-    public LocalDate getEndDate() {
+    LocalDate getEndDate() {
         return endDate;
     }
 
