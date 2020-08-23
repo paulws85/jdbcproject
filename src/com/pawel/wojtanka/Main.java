@@ -22,15 +22,15 @@ public class Main {
         "FROM moviesinfo " +
         "WHERE releaseDate BETWEEN ? AND ?";
     private static final String INSERT_MOVIE = "INSERT INTO moviesinfo(title, genre, releaseDate, description) VALUES(?, ?, ?, ?)";
-    private static final String INSERT_MOVIE_COPY = "INSERT INTO moviescopies(movieInfoId, isRented, rentedTimes, rentedTo) VALUES(?, ?, ?, ?)";
-    private static final String UPDATE_MOVIE_COPY = "UPDATE moviescopies SET isRented = ?, rentedTimes = ?, rentedTo = ? where copyId = ?";
+    private static final String INSERT_MOVIE_COPY = "INSERT INTO moviescopies(movieInfoId, isRented, rentedTimes) VALUES(?, ?, ?)";
+    private static final String UPDATE_MOVIE_COPY = "UPDATE moviescopies SET isRented = ?, rentedTimes = ? where copyId = ?";
     private static final String INSERT_CUSTOMER = "INSERT INTO customers(fullName, phone, email, address) VALUES(?, ?, ?, ?)";
     private static final String RENT_MOVIE = "INSERT INTO " +
         "rents(rentedMovieId, customer, status, rentPricePerDay, rentedDate) VALUES(?, ?, ?, ?, ?)";
     private static final String FIND_MOVIE = "SELECT movieInfoId FROM moviesinfo WHERE title = ? LIMIT 1";
     private static final String FIND_CUSTOMER = "SELECT customerId FROM customers WHERE email = ? LIMIT 1";
-    private static final String READ_RENTED_TIMES = "SELECT rentedTimes FROM moviescopies WHERE copyId = ? LIMIT 1";
-    private static final String FIND_FIRST_FREE_MOVIE_COPY = "SELECT moviescopies copyId where movieInfoId = ? AND isRented = 0 LIMIT 1";
+    private static final String READ_RENTED_TIMES = "SELECT rentedTimes FROM moviescopies WHERE copyId = ?";
+    private static final String FIND_FIRST_FREE_MOVIE_COPY = "SELECT copyId FROM moviescopies where movieInfoId = ? AND isRented = 0 LIMIT 1";
 
     private static Connection DB_CONNECTION;
 
@@ -74,7 +74,7 @@ public class Main {
                 LocalDate.parse("1998-07-06"),
                 "War movie"));
 
-            rentMovie("krzysztof.pawlak@gmail.com", "Szeregowiec Rayan", 10.0, 3);
+            System.out.println("Rent movie. Result: " + rentMovie("jan.kowalski@gmail.com", "Szeregowiec Rayan", 10.0, 3));
 
 //            stmt.close();
             DB_CONNECTION.close();
@@ -149,15 +149,22 @@ public class Main {
     }
 
     private static int findCustomer(String email) {
+        int customerId = 0;
         try (PreparedStatement stmt = DB_CONNECTION.prepareStatement(FIND_CUSTOMER)) {
             stmt.setString(1, email);
-
-            return stmt.executeQuery().getInt("customerId");
+            //try (ResultSet rs = stmt.executeQuery()) {
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    customerId = rs.getInt("customerId");
+                }
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return 0;
+        return customerId;
     }
 
     private static int addMovie(String title, String genre, LocalDate releaseDate, String description) {
@@ -180,7 +187,6 @@ public class Main {
             stmt.setInt(1, movieInfoId);
             stmt.setInt(2, 0);
             stmt.setInt(3, 0);
-            stmt.setInt(4, 0);
 
             return stmt.executeUpdate();
         } catch (SQLException e) {
@@ -190,12 +196,11 @@ public class Main {
         return 0;
     }
 
-    private static int updateMovieCopy(int copyId, int isRented, int rentedTimes, int rentedTo) {
+    private static int updateMovieCopy(int copyId, int isRented, int rentedTimes) {
         try (PreparedStatement stmt = DB_CONNECTION.prepareStatement(UPDATE_MOVIE_COPY)) {
             stmt.setInt(1, isRented);
             stmt.setInt(2, rentedTimes);
-            stmt.setInt(3, rentedTo);
-            stmt.setInt(4, copyId);
+            stmt.setInt(3, copyId);
 
             return stmt.executeUpdate();
         } catch (SQLException e) {
@@ -206,27 +211,41 @@ public class Main {
     }
 
     private static int readMovieRentedTimes(int copyId) {
+        int rentedTimes = 0;
         try (PreparedStatement stmt = DB_CONNECTION.prepareStatement(READ_RENTED_TIMES)) {
             stmt.setInt(1, copyId);
-
-            return stmt.executeQuery().getInt("rentedTimes");
+            //try (ResultSet rs = stmt.executeQuery()) {
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    rentedTimes = rs.getInt("rentedTimes");
+                }
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return 0;
+        return rentedTimes;
     }
 
     private static int findFirstFreeMovieCopy(int movieInfoId) {
+        int movieCopyId = 0;
         try (PreparedStatement stmt = DB_CONNECTION.prepareStatement(FIND_FIRST_FREE_MOVIE_COPY)) {
             stmt.setInt(1, movieInfoId);
-
-            return stmt.executeQuery().getInt("copyId");
+//            try (ResultSet rs = s1.executeQuery()) {
+            ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    movieCopyId = rs.getInt("copyId");
+                }
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return 0;
+        return movieCopyId;
     }
 
     private static int makeMoviePossibleToRent(String title, String genre, LocalDate releaseDate, String description) {
@@ -243,15 +262,22 @@ public class Main {
     }
 
     private static int findMovieId(String movieTitle) {
+        int movieId = 0;
         try (PreparedStatement stmt = DB_CONNECTION.prepareStatement(FIND_MOVIE)) {
             stmt.setString(1, movieTitle);
-
-            return stmt.executeQuery().getInt("movieInfoId");
+            //try (ResultSet rs = stmt.executeQuery()) {
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    movieId = rs.getInt("movieInfoId");
+                }
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return 0;
+        return movieId;
     }
 
     private static int addNewRent(int rentedMovieId,
@@ -290,10 +316,9 @@ public class Main {
         }
 
         int customerId = findCustomer(email);
-        int addCustomerResult = 0;
         if (customerId == 0) {
             Customer customer = askCustomerAboutProfileData();
-            addCustomerResult = addCustomer(customer.getFullName(), customer.getPhone(), customer.getEmail(), customer.getAddress());
+            addCustomer(customer.getFullName(), customer.getPhone(), customer.getEmail(), customer.getAddress());
             customerId = findCustomer(email);
         }
 
@@ -303,9 +328,9 @@ public class Main {
 
         int rentedTimes = readMovieRentedTimes(rentedMovieId);
 
-        int updateMovieCopyResult = updateMovieCopy(rentedMovieId, 1, rentedTimes, 1);
+        int updateMovieCopyResult = updateMovieCopy(rentedMovieId, 1, rentedTimes + 1);
 
-        return addCustomerResult * addNewRentResult * updateMovieCopyResult;
+        return addNewRentResult * updateMovieCopyResult;
     }
 
 }
